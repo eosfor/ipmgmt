@@ -102,10 +102,16 @@ function Get-IPRanges {
     param(
         [Parameter(Mandatory = $true, ParameterSetName = "ByNetworkList")]
         $Networks,
+        [Parameter(Mandatory = $true, ParameterSetName = "ByBaseNet")]
+        [System.Net.IPNetwork] $BaseNet,
         [Parameter(Mandatory = $true, ParameterSetName = "ByNetworkList")]
+        [Parameter(Mandatory = $true, ParameterSetName = "ByBaseNet")]
         [ValidateRange(8, 30)]
         [int] $CIDR
     )
+    # !!!!!!!!!!!!!!!!!!!!!
+    ## $BaseNet = $base | % {[System.Net.IPNetwork]::Parse($_)}
+    # !!!!!!!!!!!!!!!!!!!!!
     function NextSubnet ($network, $newCIDR ) {
         $net = [System.Net.IPNetwork]::Parse($network)
         $netmask = [System.Net.IPNetwork]::ToNetmask($newCIDR, $net.AddressFamily)
@@ -133,14 +139,15 @@ function Get-IPRanges {
             $ns = NextSubnet $n $CIDR
             Write-Verbose "subnet is`: $n; next subnet is $ns"
 
-            # test if 'next subnet' is a part of a base range
-            if (-not [System.Net.IPNetwork]::Contains($BaseNet, $ns)) {
-                Write-Verbose "$ns is not in a $BaseNet"
-                # skip the network if it is not in a base range
-                continue;
+            if ($PsCmdlet.ParameterSetName -eq 'ByBaseNet') {
+                # test if 'next subnet' is a part of a base range
+                if (-not [System.Net.IPNetwork]::Contains($BaseNet, $ns)) {
+                    Write-Verbose "$ns is not in a $BaseNet"
+                    # skip the network if it is not in a base range
+                    continue;
+                }
+                else {Write-Verbose "$ns is in a $BaseNet"}
             }
-            else {Write-Verbose "$ns is in a $BaseNet"}
-
 
             # test if 'next subnet' overlaps any of the existing below it in a sorted list
             $k = $i; $isoverlap = $false
@@ -190,32 +197,31 @@ function Get-IPRanges {
             }
         }
 
-        # TODO: search networks before the provided set of used networks
-        $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
-        $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
-        $diff = $lastFree - $firstFree
-        if ($diff -gt 0) {
-            Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
-            $firstUsableFromBase = $BaseNet.FirstUsable
-            $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
+        if ($PsCmdlet.ParameterSetName -eq 'ByBaseNet') {
+            # TODO: search networks in front of the provided set of used networks
+            $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
+            $diff = $lastFree - $firstFree
+            if ($diff -gt 0) {
+                Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
+                $firstUsableFromBase = $BaseNet.FirstUsable
+                $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
 
-            $firstNetToTest = "$($BaseNet.FirstUsable.ToString())/$CIDR"
-            $netToTest = [System.Net.IPNetwork]::Parse($firstNetToTest)
+                $firstNetToTest = "$($BaseNet.FirstUsable.ToString())/$CIDR"
+                $netToTest = [System.Net.IPNetwork]::Parse($firstNetToTest)
 
 
-            while (-not [System.Net.IPNetwork]::Overlap($outNets[0], $netToTest)) {
-                $netToTest | Add-Member -MemberType NoteProperty -Name IsFree -Value $true -Force
-                $frontNets.Add($netToTest)
-                $netToTest = NextSubnet $netToTest $CIDR
+                while (-not [System.Net.IPNetwork]::Overlap($outNets[0], $netToTest)) {
+                    $netToTest | Add-Member -MemberType NoteProperty -Name IsFree -Value $true -Force
+                    $frontNets.Add($netToTest)
+                    $netToTest = NextSubnet $netToTest $CIDR
+                }
+
+                Write-Verbose "$frontNets"
+                $freeNets.AddRange( $frontNets )
+                $freeNets.Sort()
             }
-
-            Write-Verbose "$frontNets"
-            $freeNets.AddRange( $frontNets )
-            $freeNets.Sort()
         }
-
-
-
         # join used and unused together to output them properly
         $outNets.AddRange( $freeNets )
         $outNets.Sort()
@@ -225,5 +231,20 @@ function Get-IPRanges {
 
     }
 
-    & $calcNets
+    switch ($PsCmdlet.ParameterSetName) {
+        "ByNetworkList" { & $calcNets };
+        "ByBaseNet" {
+            $Networks = Get-CloudNets -BaseNet (Get-BaseNets | ? network -in "$($BaseNet.Network.ToString())/$($BaseNet.CIDR)")
+            if (-not $Networks) {
+                #first network on the net
+                [System.Net.IPNetwork]::Subnet($BaseNet, $CIDR)[0]
+            }
+            else {
+                & $calcNets
+            }
+        };
+    }
+
 }
+
+Get-IPRanges -Networks "10.10.5.0/24", "10.10.7.0/24" -CIDR 25 -Verbose | ft
