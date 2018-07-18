@@ -21,7 +21,7 @@ ModuleVersion = '0.0.1'
 GUID = '77fd7e63-fda8-493e-bdcf-3668ae711a79'
 
 # Author of this module
-Author = 'Andrey_Vernigora'
+Author = 'Andrey Vernigora'
 
 # Company or vendor of this module
 CompanyName = 'Unknown'
@@ -30,7 +30,7 @@ CompanyName = 'Unknown'
 Copyright = '(c) Andrey_Vernigora. All rights reserved.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'Powershell module to perform IP Range calculations'
 
 # Minimum version of the PowerShell engine required by this module
 # PowerShellVersion = ''
