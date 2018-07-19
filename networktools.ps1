@@ -191,10 +191,10 @@ function Get-IPRanges {
             }
         }
 
-            # TODO: search networks in front of the provided set of used networks
-            $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
-            $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
-            $diff = $lastFree - $firstFree
+        # TODO: search networks in front of the provided set of used networks
+        $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
+        $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
+        $diff = $lastFree - $firstFree
         if ($diff -gt 0) {
             Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
             $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
