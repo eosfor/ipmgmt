@@ -12,7 +12,7 @@
 RootModule = 'ipmgmt.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.1'
+ModuleVersion = '0.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,10 +24,10 @@ GUID = '77fd7e63-fda8-493e-bdcf-3668ae711a79'
 Author = 'Andrey Vernigora'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'NONE'
 
 # Copyright statement for this module
-Copyright = '(c) Andrey_Vernigora. All rights reserved.'
+Copyright = '(c) Andrey Vernigora. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Powershell module to perform IP Range calculations'
