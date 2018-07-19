@@ -8,7 +8,7 @@ schema: 2.0.0
 # Get-VLSMBreakdown
 
 ## SYNOPSIS
-{{Fill in the Synopsis}}
+This command is to calculate the network range breakdown to subnets, given the list of subnets and their sizes
 
 ## SYNTAX
 
@@ -17,21 +17,26 @@ Get-VLSMBreakdown [-Network] <IPNetwork> [-SubnetSize] <Array> [<CommonParameter
 ```
 
 ## DESCRIPTION
-{{Fill in the Description}}
+This command is to calculate the network range breakdown to subnets, given the list of subnets and their sizes. Command takes a list of subnets in a form of hashtable with subnet names and their sizes, and the IP range to break in a form of a CIDR notation. Then in calculates the breakdown and returns it. If it is not possible - nothing is returned.
 
 ## EXAMPLES
 
 ### Example 1
 ```powershell
-PS C:\> {{ Add example code here }}
+PS C:\> $subnets = @{type = "GTWSUBNET"; size = 30},
+>> @{type = "DMZSUBNET"; size = 62},
+>> @{type = "EDGSUBNET"; size = 30},
+>> @{type = "APPSUBNET"; size = 62},
+>> @{type = "CRESUBNET"; size = 62}
+PS C:\> Get-VLSMBreakdown -Network 10.10.5.0/24 -SubnetSize $subnets
 ```
 
-{{ Add example description here }}
+The variable $subnets contains subnets, or subnet zones we want to use. "Type" - specifies the name of the zone or subnet. "Size" - sets the maximum number of IPs which will be available for the subnet.
 
 ## PARAMETERS
 
 ### -Network
-{{Fill Network Description}}
+The network range we want to break
 
 ```yaml
 Type: IPNetwork
@@ -46,7 +51,7 @@ Accept wildcard characters: False
 ```
 
 ### -SubnetSize
-{{Fill SubnetSize Description}}
+The array of subnets in a form of a hashtable @{type = "<name>"; size = <int>} we want to put into the specified network range
 
 ```yaml
 Type: Array
@@ -76,3 +81,7 @@ For more information, see about_CommonParameters (http://go.microsoft.com/fwlink
 ## NOTES
 
 ## RELATED LINKS
+
+[ipnetwork2 library](https://github.com/lduchosal/ipnetwork)
+[cloudmgmt module](https://github.com/eosfor/cloudmgmt)
+[ipmgmt module](https://github.com/eosfor/ipmgmt)
