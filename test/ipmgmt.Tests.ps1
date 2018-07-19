@@ -12,8 +12,8 @@ Describe 'Module Manifest Tests' {
     }
 }
 
-Describe 'Simple test' {
-    It 'Passes a simple test' {
+Describe 'A simple test for Get-VLSMBreakdown' {
+    It 'Passes a simple test for Get-VLSMBreakdown' {
         $subnets =
         @{type = "GTWSUBNET"; size = 30},
         @{type = "DMZSUBNET"; size = 62},
@@ -22,6 +22,12 @@ Describe 'Simple test' {
         @{type = "CRESUBNET"; size = 62}
 
         Get-VLSMBreakdown -Network 10.10.5.0/24 -SubnetSize $subnets
+    }
+}
+
+Describe 'A simple test for Get-IPRanges' {
+    It 'Passes a simple test for Get-IPRanges' {
+        Get-IPRanges -Networks "10.10.5.0/24", "10.10.7.0/24" -CIDR 22 -BaseNet "10.10.0.0/16"
     }
 }
 
