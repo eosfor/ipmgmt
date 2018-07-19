@@ -96,3 +96,130 @@ function Get-VLSMBreakdown {
         $reserved | add-member -MemberType NoteProperty -Name type -Value "reserved" -PassThru -Force
     }
 }
+
+function Get-IPRanges {
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $true, ParameterSetName = "ByBaseNet")]
+        $Networks,
+        [Parameter(Mandatory = $true, ParameterSetName = "ByBaseNet")]
+        [System.Net.IPNetwork] $BaseNet,
+        [Parameter(Mandatory = $true, ParameterSetName = "ByBaseNet")]
+        [ValidateRange(8, 30)]
+        [int] $CIDR
+    )
+    function NextSubnet ($network, $newCIDR ) {
+        $net = [System.Net.IPNetwork]::Parse($network)
+        $netmask = [System.Net.IPNetwork]::ToNetmask($newCIDR, $net.AddressFamily)
+
+        [bigint] $nextAddr = [System.Net.IPNetwork]::ToBigInteger($net.Broadcast) + 1
+        [bigint] $mask = [System.Net.IPNetwork]::ToBigInteger($netmask)
+        [bigint] $masked = $nextAddr -band $mask
+
+        if ($masked -eq $nextAddr) {
+            Write-Verbose "Masked"
+            $next = $masked
+        }
+        else {
+            Write-Verbose "Magic!"
+            $next = $masked + [bigint]::Pow(2, 32 - $newCIDR)
+        }
+
+        $nextNetwork = [System.Net.IPNetwork]::ToIPAddress($next, [System.Net.Sockets.AddressFamily]::InterNetwork)
+        $nextSubnet = [System.Net.IPNetwork]::Parse($nextNetwork, $netmask)
+        $nextSubnet
+    }
+    function getIPRanges {
+        for ($i = 0; $i -le ($outNets.Count - 1); $i++ ) {
+            $n = $outNets[$i]
+            $ns = NextSubnet $n $CIDR
+            Write-Verbose "subnet is`: $n; next subnet is $ns"
+
+            # test if 'next subnet' is a part of a base range
+            if (-not [System.Net.IPNetwork]::Contains($BaseNet, $ns)) {
+                Write-Verbose "$ns is not in a $BaseNet"
+                # skip the network if it is not in a base range
+                continue;
+            }
+            else {Write-Verbose "$ns is in a $BaseNet"}
+
+            # test if 'next subnet' overlaps any of the existing below it in a sorted list
+            $k = $i; $isoverlap = $false
+            do {
+                if ([System.Net.IPNetwork]::Overlap($outNets[$k], $ns)) {
+                    Write-Verbose "$ns overlaps $($outNets[$k])"
+                    # break this loop if there is an overlap
+                    $isoverlap = $true
+                    break
+                }
+                $k++
+            } while ($k -lt ($outNets.Count))
+
+            # when there were no overlaps -> output
+            if (! $isoverlap) {
+                Write-Verbose "$ns did not overlap"
+                $ns
+            }
+        }
+    }
+
+    $calcNets = {
+        # put all networks we've found to the out collection, sort them
+        # for some reason sort cmdlet does not work well, so use Lists and internal comparer.
+        $outNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
+        $Networks | ForEach-Object {
+            $outNets.add($_)
+        }
+        $outNets.Sort()
+
+        # create a collection of unused nets
+        $freeNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
+
+        # mark all existing as 'used'
+        $outNets | Add-Member -MemberType NoteProperty -Name IsFree -Value $false -Force
+
+        # search for free ranges in between the items of the 'used' nets list and after the last one
+        $n = getIPRanges
+        Write-Verbose "ip ranges we've got`: $n"
+
+        # if there is something - add them to 'unused' list
+        # mark them as 'unused'
+        if ($n.count -gt 0) {
+            $n | ForEach-Object {
+                $net = $_ | Add-Member -MemberType NoteProperty -Name IsFree -Value $true -Force -PassThru;
+                $freeNets.add($net)
+            }
+        }
+
+            # TODO: search networks in front of the provided set of used networks
+            $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
+            $diff = $lastFree - $firstFree
+        if ($diff -gt 0) {
+            Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
+            $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
+            $firstNetToTest = "$($BaseNet.FirstUsable.ToString())/$CIDR"
+            $netToTest = [System.Net.IPNetwork]::Parse($firstNetToTest)
+
+
+            while (-not [System.Net.IPNetwork]::Overlap($outNets[0], $netToTest)) {
+                $netToTest | Add-Member -MemberType NoteProperty -Name IsFree -Value $true -Force
+                $frontNets.Add($netToTest)
+                $netToTest = NextSubnet $netToTest $CIDR
+            }
+
+            Write-Verbose "$frontNets"
+            $freeNets.AddRange( $frontNets )
+            $freeNets.Sort()
+        }
+        # join used and unused together to output them properly
+        $outNets.AddRange( $freeNets )
+        $outNets.Sort()
+
+        # sometimes two consequent subnets may end up with the same next free subnet. selecting unique values to avoid confusion
+        $outNets | Select-Object -Unique
+
+    }
+
+    & $calcNets
+}
