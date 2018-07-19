@@ -12,6 +12,7 @@ In general it is a part of the project I run to show the process of creation Ent
 I describe the process of making this module in the following posts (hope it is gong to be more than one post)
 
 - [01. Episode 2: Making ipmgmt module](https://eosfor.github.io/2018/episode2-making-ipmgmt-module/)
+- [02. Episode 2: What if we need to find a free IP Range?](https://eosfor.github.io/2018/episode2-ip-range-search/)
 
 Articles about the core module are here
 
