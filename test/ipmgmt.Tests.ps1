@@ -17,11 +17,11 @@ Describe 'A simple test for Get-VLSMBreakdown' {
         $subnets =
         @{type = "GTWSUBNET"; size = 30},
         @{type = "DMZSUBNET"; size = 62},
-        @{type = "EDGSUBNET"; size = 30},
+        @{type = "EDGSUBNET"; size = 55},
         @{type = "APPSUBNET"; size = 62},
         @{type = "CRESUBNET"; size = 62}
 
-        Get-VLSMBreakdown -Network 10.10.5.0/24 -SubnetSize $subnets
+        Get-VLSMBreakdown -Network 10.10.0.0/16 -SubnetSize $subnets | ft
     }
 }
 
