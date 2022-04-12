@@ -5,13 +5,6 @@ $modulePath = "$PSScriptRoot\.."
 Import-Module $modulePath -Verbose
 
 
-Describe 'Module Manifest Tests' {
-    It 'Passes Test-ModuleManifest' {
-        Test-ModuleManifest -Path $ModuleManifestPath | Should Not BeNullOrEmpty
-        $? | Should Be $true
-    }
-}
-
 Describe 'A simple test for Get-VLSMBreakdown' {
     It 'Passes a simple test for Get-VLSMBreakdown' {
         $subnets =
