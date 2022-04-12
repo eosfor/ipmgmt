@@ -46,6 +46,7 @@ function Get-VLSMBreakdown {
         #list is stored in $vlsmMasks variable
         $SubnetSize | ForEach-Object {
             $length = 32 - [math]::Ceiling([math]::Log($_.size + 2, 2))
+            if ($length -le $Network.Cidr) {throw "The subnet $($_.type) is of wrong size" }
             [PSCustomObject]@{
                 type   = $_.type;
                 length = $length
@@ -68,6 +69,11 @@ function Get-VLSMBreakdown {
             #pick a msk form a queue
             $v = $vlsmMasks.Dequeue()
             try {
+                #reordering the queue to keep longest masks up top
+                $t = [System.Collections.Queue]::new()
+                $vlsmStack.ToArray() | Sort-Object -Property CIDR -Descending | % {$t.Enqueue($_)}
+                $vlsmStack = $t
+
                 #pick a network block form a queue
                 $current = $vlsmStack.Dequeue()
             }
