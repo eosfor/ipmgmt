@@ -7,6 +7,10 @@ This repo is the ipmgmt module, which can be used to:
 
 In general it is a part of the project I run to show the process of creation Enterprise-focused PowerShell module, or set of modules for managing hybrid infrastructures in On-prem<->Azure environments.
 
+## Installation
+
+The module can be installed from the [PowerShell gallery](https://www.powershellgallery.com/packages/ipmgmt)
+
 ## More details
 
 I describe the process of making this module in the following posts (hope it is gong to be more than one post)
