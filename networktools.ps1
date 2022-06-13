@@ -5,9 +5,13 @@ function Get-VLSMBreakdown {
         [ValidateNotNullOrEmpty()]
         [System.Net.IPNetwork]$Network,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [array]$SubnetSize
+        [array]$SubnetSize,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [array]$SubnetSizeCidr
     )
 
     function processRecord($net, $cidr, $type) {
@@ -36,6 +40,14 @@ function Get-VLSMBreakdown {
         }
     }
 
+
+    
+    # Throw error in case SubnetSize and SubnetSizeCidr param is being used.
+    if ($SubnetSize -and $SubnetSizeCidr) {
+        Throw "You cannot use SubnetSize and SubnetSizeCidr parameter. You can use only one of them."
+    }
+
+
     # Hashtable to map CIDR from $SubnetSize Parameter values to usable IPs.
     # Needed for calculations.
     $subnetCidrMap = @{
@@ -55,18 +67,23 @@ function Get-VLSMBreakdown {
         29 = 6
     }
 
-    # Map CIDR from $SubnetSize Parameter values to $subnetCidrMap values.
-    $SubnetAddressMap = @()
-    foreach ($sub in $SubnetSize) {
-        $subnetDef = @{
-            type = $sub.type
-            size = $subnetCidrMap.($sub.cidr)
-        }
+
+    # If Cidr is being used, we have to convert Cidr to 'usableIPs' to map calucaltion logic in the script below.
+    if ($SubnetSizeCidr) {
+        # Map CIDR from $SubnetSize Parameter values to $subnetCidrMap values.
+        $SubnetAddressMap = @()
+        foreach ($sub in $SubnetSizeCidr) {
+            $subnetDef = @{
+                type = $sub.type
+                size = $subnetCidrMap.($sub.cidr)
+            }
     
-        $SubnetAddressMap += $subnetDef
+            $SubnetAddressMap += $subnetDef
+        }
+
+        $SubnetSize = $SubnetAddressMap
     }
 
-    $SubnetSize = $SubnetAddressMap
 
 
     # Check if summarized $SubnetSize fits into network address range
@@ -138,6 +155,43 @@ function Get-VLSMBreakdown {
         Throw "The specified address space of $($Network.Network.IPAddressToString)/$($Network.cidr) is too small for the subnets."
     }
 }
+
+
+
+
+
+
+
+$test123 = @{type = "GTWSUBNET"; cidr = 25 }, @{type = "GTWSUBNET"; cidr = 26 }
+
+Get-VLSMBreakdown -Network 10.117.128.0/24 -SubnetSizeCidr $test123
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function Get-IPRanges {
     [cmdletbinding()]
     param(
