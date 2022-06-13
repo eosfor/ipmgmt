@@ -22,5 +22,10 @@ Describe 'A simple test for Get-IPRanges' {
     It 'Passes a simple test for Get-IPRanges' {
         Get-IPRanges -Networks "10.10.5.0/24", "10.10.7.0/24" -CIDR 22 -BaseNet "10.10.0.0/16"
     }
-}
 
+    It 'Issue-1: returns a subnet of the VNET size' {
+        $subnets = @{type = "TEST"; size = 250}
+
+        (Get-VLSMBreakdown -Network "192.168.0.0/24" -SubnetSize $subnets).count | Should -Be 1
+    }
+}
