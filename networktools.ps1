@@ -46,7 +46,7 @@ function Get-VLSMBreakdown {
         #list is stored in $vlsmMasks variable
         $SubnetSize | ForEach-Object {
             $length = 32 - [math]::Ceiling([math]::Log($_.size + 2, 2))
-            if ($length -le $Network.Cidr) {throw "The subnet $($_.type) is of wrong size" }
+            if ($length -lt $Network.Cidr) {throw "The subnet $($_.type) is of wrong size" }
             [PSCustomObject]@{
                 type   = $_.type;
                 length = $length
