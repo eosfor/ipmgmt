@@ -69,11 +69,6 @@ function Get-VLSMBreakdown {
             #pick a msk form a queue
             $v = $vlsmMasks.Dequeue()
             try {
-                #reordering the queue to keep longest masks up top
-                $t = [System.Collections.Queue]::new()
-                $vlsmStack.ToArray() | Sort-Object -Property CIDR -Descending | % {$t.Enqueue($_)}
-                $vlsmStack = $t
-
                 #pick a network block form a queue
                 $current = $vlsmStack.Dequeue()
             }
@@ -174,7 +169,9 @@ function Get-IPRanges {
         # for some reason sort cmdlet does not work well, so use Lists and internal comparer.
         $outNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
         $Networks | ForEach-Object {
-            $outNets.add($_)
+            if ($_) {
+                $outNets.add($_)
+            }
         }
         $outNets.Sort()
 
@@ -199,8 +196,13 @@ function Get-IPRanges {
 
         # TODO: search networks in front of the provided set of used networks
         $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
-        $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
-        $diff = $lastFree - $firstFree
+        if ($outNets.Count -gt 0) {
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
+        }
+        else {
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
+        }
+        $diff = $lastFree - $firstFree 
         if ($diff -gt 0) {
             Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
             $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
