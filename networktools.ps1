@@ -10,7 +10,6 @@ function Get-VLSMBreakdown {
         [array]$SubnetSize
     )
 
-
     function processRecord($net, $cidr, $type) {
         try {
             #try breaking down a network block by CIDR in a form of length
@@ -103,6 +102,11 @@ function Get-VLSMBreakdown {
             #pick a msk form a queue
             $v = $vlsmMasks.Dequeue()
             try {
+                #reordering the queue to keep longest masks up top
+                $t = [System.Collections.Queue]::new()
+                $vlsmStack.ToArray() | Sort-Object -Property CIDR -Descending | % { $t.Enqueue($_) }
+                $vlsmStack = $t
+                
                 #pick a network block form a queue
                 $current = $vlsmStack.Dequeue()
             }
@@ -178,7 +182,7 @@ function Get-IPRanges {
                 # skip the network if it is not in a base range
                 continue;
             }
-            else {Write-Verbose "$ns is in a $BaseNet"}
+            else { Write-Verbose "$ns is in a $BaseNet" }
 
             # test if 'next subnet' overlaps any of the existing below it in a sorted list
             $k = $i; $isoverlap = $false
