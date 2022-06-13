@@ -10,6 +10,7 @@ function Get-VLSMBreakdown {
         [array]$SubnetSize
     )
 
+
     function processRecord($net, $cidr, $type) {
         try {
             #try breaking down a network block by CIDR in a form of length
@@ -36,8 +37,41 @@ function Get-VLSMBreakdown {
         }
     }
 
+    # Hashtable to map CIDR from $SubnetSize Parameter values to usable IPs.
+    # Needed for calculations.
+    $subnetCidrMap = @{
+        16 = 65534
+        17 = 32766
+        18 = 16382
+        19 = 8190
+        20 = 4094
+        21 = 2046
+        22 = 1022
+        23 = 510
+        24 = 254
+        25 = 126
+        26 = 62
+        27 = 30
+        28 = 14
+        29 = 6
+    }
 
-    if (($SubnetSize | ForEach-Object {[PSCustomObject]$_} | Measure-Object -Property size -Sum).Sum -lt $Network.Usable) {
+    # Map CIDR from $SubnetSize Parameter values to $subnetCidrMap values.
+    $SubnetAddressMap = @()
+    foreach ($sub in $SubnetSize) {
+        $subnetDef = @{
+            type = $sub.type
+            size = $subnetCidrMap.($sub.cidr)
+        }
+    
+        $SubnetAddressMap += $subnetDef
+    }
+
+    $SubnetSize = $SubnetAddressMap
+
+
+    # Check if summarized $SubnetSize fits into network address range
+    if (($SubnetSize | ForEach-Object { [PSCustomObject]$_ } | Measure-Object -Property size -Sum).Sum -le $Network.Usable) {
         #queue of masks we wnat to use to break our network
         $vlsmMasks = [System.Collections.Queue]::new()
 
@@ -46,12 +80,12 @@ function Get-VLSMBreakdown {
         #list is stored in $vlsmMasks variable
         $SubnetSize | ForEach-Object {
             $length = 32 - [math]::Ceiling([math]::Log($_.size + 2, 2))
-            if ($length -le $Network.Cidr) {throw "The subnet $($_.type) is of wrong size" }
+            if ($length -lt $Network.Cidr) { throw "The subnet $($_.type) is of wrong size" }
             [PSCustomObject]@{
                 type   = $_.type;
                 length = $length
             }
-        } | Sort-Object -Property length | ForEach-Object {$vlsmMasks.Enqueue($_)}
+        } | Sort-Object -Property length | ForEach-Object { $vlsmMasks.Enqueue($_) }
 
         #queue of networks to break down
         $vlsmStack = [System.Collections.Queue]::new()
@@ -69,11 +103,6 @@ function Get-VLSMBreakdown {
             #pick a msk form a queue
             $v = $vlsmMasks.Dequeue()
             try {
-                #reordering the queue to keep longest masks up top
-                $t = [System.Collections.Queue]::new()
-                $vlsmStack.ToArray() | Sort-Object -Property CIDR -Descending | % {$t.Enqueue($_)}
-                $vlsmStack = $t
-
                 #pick a network block form a queue
                 $current = $vlsmStack.Dequeue()
             }
@@ -83,17 +112,17 @@ function Get-VLSMBreakdown {
 
             #processing the block against the mask and assosiated type
             #if no success - return mask back to tail of a queue and increase failue count
-            if (! (processRecord $current $v.length $v.type) ) { $vlsmMasks.Enqueue($v); $failureCount++}
+            if (! (processRecord $current $v.length $v.type) ) { $vlsmMasks.Enqueue($v); $failureCount++ }
 
             write-verbose ("VLSM MASKS`: " + $vlsmMasks.Count)
             write-verbose ("FAILURES`: " + $failureCount)
 
-            if ($vlsmMasks.Count -eq $failureCount) {break} # break when no records processed during a loop cycle
+            if ($vlsmMasks.Count -eq $failureCount) { break } # break when no records processed during a loop cycle
         } while ($vlsmMasks.Count -ne 0) #leave when we have masks queue emty
 
         write-verbose ("OUT STACK`: " + $outStack.Count)
         write-verbose ("SubnetSuize`: " + $SubnetSize.count)
-        if ($outStack.count -lt $SubnetSize.count) {write-warning -message "subnetting failed"}
+        if ($outStack.count -lt $SubnetSize.count) { write-warning -message "subnetting failed" }
 
         #in case we have more subnets than requested store them
         $reserved = @([System.Net.IPNetwork]::Supernet($vlsmStack.ToArray()))
@@ -101,8 +130,10 @@ function Get-VLSMBreakdown {
         #and mark them as 'reserved'
         $reserved | add-member -MemberType NoteProperty -Name type -Value "reserved" -PassThru -Force
     }
+    else {
+        Throw "The specified address space of $($Network.Network.IPAddressToString)/$($Network.cidr) is too small for the subnets."
+    }
 }
-
 function Get-IPRanges {
     [cmdletbinding()]
     param(
