@@ -5,14 +5,17 @@ function Get-VLSMBreakdown {
         [ValidateNotNullOrEmpty()]
         [System.Net.IPNetwork]$Network,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true,
+            ParameterSetName = "SubnetSize")]
         [ValidateNotNullOrEmpty()]
         [array]$SubnetSize,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true,
+            ParameterSetName = "SubnetSizeCidr")]
         [ValidateNotNullOrEmpty()]
         [array]$SubnetSizeCidr
     )
+
 
     function processRecord($net, $cidr, $type) {
         try {
@@ -41,11 +44,16 @@ function Get-VLSMBreakdown {
     }
 
 
-    
-    # Throw error in case SubnetSize and SubnetSizeCidr param is being used.
-    if ($SubnetSize -and $SubnetSizeCidr) {
-        Throw "You cannot use SubnetSize and SubnetSizeCidr parameter. You can use only one of them."
+
+    # Check for correct param usage
+    if ("cidr" -in $SubnetSize.Keys) {
+        Throw "You cannot use Cidr notation with SubnetSize param. Please use SubnetSizeCidr param instead."
     }
+    elseif ("size" -in $SubnetSizeCidr.Keys) {
+        Throw "You cannot use Size notation with SubnetSizeCidr param. Please use SubnetSize param instead."
+    }
+
+    
 
 
     # Hashtable to map CIDR from $SubnetSize Parameter values to usable IPs.
@@ -77,10 +85,8 @@ function Get-VLSMBreakdown {
                 type = $sub.type
                 size = $subnetCidrMap.($sub.cidr)
             }
-    
             $SubnetAddressMap += $subnetDef
         }
-
         $SubnetSize = $SubnetAddressMap
     }
 
@@ -156,42 +162,6 @@ function Get-VLSMBreakdown {
     }
 }
 
-
-
-
-
-
-
-$test123 = @{type = "GTWSUBNET"; cidr = 25 }, @{type = "GTWSUBNET"; cidr = 26 }
-
-Get-VLSMBreakdown -Network 10.117.128.0/24 -SubnetSizeCidr $test123
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function Get-IPRanges {
     [cmdletbinding()]
     param(
@@ -263,7 +233,9 @@ function Get-IPRanges {
         # for some reason sort cmdlet does not work well, so use Lists and internal comparer.
         $outNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
         $Networks | ForEach-Object {
-            $outNets.add($_)
+            if ($_) {
+                $outNets.add($_)
+            }
         }
         $outNets.Sort()
 
@@ -288,8 +260,13 @@ function Get-IPRanges {
 
         # TODO: search networks in front of the provided set of used networks
         $firstFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
-        $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
-        $diff = $lastFree - $firstFree
+        if ($outNets.Count -gt 0) {
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($outNets[0].FirstUsable)
+        }
+        else {
+            $lastFree = [System.Net.IPNetwork]::ToBigInteger($BaseNet.FirstUsable)
+        }
+        $diff = $lastFree - $firstFree 
         if ($diff -gt 0) {
             Write-Verbose "there are addresses in front of occupied blocks, number is`: $diff"
             $frontNets = [System.Collections.Generic.List[System.Net.IPNetwork]]::new()
