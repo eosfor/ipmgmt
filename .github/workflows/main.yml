@@ -25,7 +25,13 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
       
-      - run: |
+      - name: dump environment
+        run: |
+          dir env:\
+        shell: pwsh
+        
+      - name: push package
+        run: |
           $env:GITHUB_WORKSPACE
-          Publish-Module -Path $env:GITHUB_WORKSPACE -NuGetApiKey $env:PS_GALLERY_SECRET
+          Publish-Module -Path $env:GITHUB_WORKSPACE -NuGetApiKey ${{ secrets.PS_GALLERY_SECRET }}
         shell: pwsh
