@@ -30,6 +30,13 @@ jobs:
           dir env:\
         shell: pwsh
         
+      - name: Run Pester tests
+        run: |
+          Set-PSRepository psgallery -InstallationPolicy trusted
+          Install-Module -Name Pester -RequiredVersion 5.0.4 -Confirm:$false -Force
+          Invoke-Pester -Path "$($env:GITHUB_WORKSPACE)\test"        
+        shell: pwsh
+        
       - name: push package
         run: |
           $env:GITHUB_WORKSPACE
