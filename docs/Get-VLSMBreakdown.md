@@ -13,7 +13,7 @@ This command is to calculate the network range breakdown to subnets, given the l
 ## SYNTAX
 
 ```
-Get-VLSMBreakdown [-Network] <IPNetwork> [-SubnetSize] <Array> [<CommonParameters>]
+Get-VLSMBreakdown [-Network] <IPNetwork> [-SubnetSize] <Array> [<CommonParameters>] [-SubnetSizeCidr] <Array> [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -31,7 +31,23 @@ PS C:\> $subnets = @{type = "GTWSUBNET"; size = 30},
 PS C:\> Get-VLSMBreakdown -Network 10.10.5.0/24 -SubnetSize $subnets
 ```
 
-The variable $subnets contains subnets, or subnet zones we want to use. "Type" - specifies the name of the zone or subnet. "Size" - sets the maximum number of IPs which will be available for the subnet.
+The variable $subnets contains subnets, or subnet zones we want to use.
+- type: specifies the name of the zone or subnet.
+- size: sets the maximum number of IPs which will be available for the subnet.
+
+### Example 2
+```powershell
+PS C:\> $subnets = @{type = "GTWSUBNET"; cidr = 27},
+>> @{type = "DMZSUBNET"; cidr = 26},
+>> @{type = "EDGSUBNET"; cidr = 27},
+>> @{type = "APPSUBNET"; cidr = 26},
+>> @{type = "CRESUBNET"; cidr = 26}
+PS C:\> Get-VLSMBreakdown -Network 10.10.5.0/24 -SubnetSizeCidr $subnets
+```
+
+The variable $subnets contains subnets, or subnet zones we want to use. 
+- type: specifies the name of the zone or subnet. 
+- cidr: specifies the address range based on Cidr notation.
 
 ## PARAMETERS
 
@@ -52,6 +68,21 @@ Accept wildcard characters: False
 
 ### -SubnetSize
 The array of subnets in a form of a hashtable @{type = "<name>"; size = <int>} we want to put into the specified network range
+
+```yaml
+Type: Array
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 1
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SubnetSizeCidr
+The array of subnets in a form of network cidr notation @{type = "<name>"; cidr = <int>} we want to put into the specified network range
 
 ```yaml
 Type: Array
